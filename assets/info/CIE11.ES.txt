@@ -1,0 +1,10 @@
+es-ES|CIE11
+5A11;Diabetes mellitus tipo 2
+5A10;Diabetes mellitus tipo 1
+8A80;Epilepsia
+BA00.0;Hipertension esencial primaria
+CA40.0;Asma bronquial aguda grave
+4A80.0;Asfixia o choque anafilactico
+NE05;Insuficiencia renal cronica
+1B11;Tuberculosis respiratoria
+8B20;Accidente cerebrovascular isquemico

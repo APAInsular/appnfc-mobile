@@ -1,0 +1,11 @@
+es-ES|SNOMEDCT
+418427003;Paciente en terapia con anticoagulantes
+14106009;Marcapasos cardiaco permanente
+441509002;Desfibrilador cardioversor implantable
+399230006;Infarto de miocardio previo
+91175000;Alergia a la penicilina
+293571005;Alergia a la lidocaina
+21331004;Presencia de traqueostomia
+116859006;Receptor de trasplante de organo
+7140000;Shock septico
+25064002;Cetoacidosis diabetica

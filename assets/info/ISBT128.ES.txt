@@ -1,0 +1,9 @@
+es-ES|ISBT128
+95;A Rh Positivo
+96;A Rh Negativo
+01;O Rh Positivo
+06;O Rh Negativo
+51;B Rh Positivo
+52;B Rh Negativo
+61;AB Rh Positivo
+62;AB Rh Negativo
