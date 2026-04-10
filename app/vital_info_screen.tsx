@@ -1,4 +1,6 @@
 import { useMedicalStore } from '@/constants/app.store';
+import { MemoryChip } from '@/core/chip';
+import { findVitalByFileIndex, LAYOUT_V1, LayoutV1Values, LayoutVersion, MedicalRecord } from '@/core/medical';
 import useMifareNFC from '@/hooks/use-mifare-nfc';
 import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
@@ -12,7 +14,6 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { findVitalByFileIndex, MedicalLayout, MedicalRecord, MemoryChip } from '../constants/types';
 
 
 
@@ -33,39 +34,29 @@ const bigIntTo8Bytes = (n: bigint): Uint8Array => {
 
 
 const bytesToBigInt = (bytes: Uint8Array): bigint => {
-    let result = 0n;
-    for (const b of bytes) {
-        result = (result << 8n) + BigInt(b);
-    }
-    return result;
+  let result = 0n;
+  for (const b of bytes) {
+    result = (result << 8n) + BigInt(b);
+  }
+  return result;
 };
 
 const bytesToNum = (bytes: Uint8Array): number => {
-    return Array.from(bytes).reduce((acc, byte) => (acc << 8) + byte, 0);
+  return Array.from(bytes).reduce((acc, byte) => (acc << 8) + byte, 0);
 };
 
 
 const tel1Bytes = bigIntTo8Bytes(34600112233n);
 const tel2Bytes = bigIntTo8Bytes(34644556677n);
-const placeholderData = new Uint8Array([
-  // PHONES (0-15): 16 bytes. 
-  // Tel 1 (8 bytes)
-  0, 0, 0, 0, 0, 0, 0, 7,   // Valor: 7
-  // Tel 2 (8 bytes)
-  0, 0, 0, 0, 0, 0, 0, 9,   // Valor: 9
-
-  // ISBT128 (16): 1 byte
-  5, // ID: 5
-
-  // CIE11 (17-23): 7 bytes
-  1, 2, 3, 0, 0, 0, 0, // IDs 1, 2 y 3 (el resto vacíos)
-
-  // SNOMEDCT (24-30): 7 bytes
-  4, 6, 8, 10, 0, 0, 0, // IDs pares (4, 6, 8, 10)
-
-  // OTHER (31-37): 7 bytes
-  1, 3, 5, 7, 9, 0, 0 // IDs impares (1, 3, 5, 7, 9)
-]);
+const placeholderData: LayoutV1Values = {
+  type: 1,
+  version: LayoutVersion.Medical,
+  phones: new Uint8Array([0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 9]),
+  isbt128: 5,
+  cie11: new Uint8Array([1, 2, 3, 0, 0, 0, 0]),
+  snomedct: new Uint8Array([4, 6, 8, 10, 0, 0, 0]),
+  other: new Uint8Array([1, 3, 5, 7, 9, 0, 0]),
+};
 
 export default function VitalInfoScreen() {
   const { vitalInfo } = useMedicalStore();
@@ -76,47 +67,50 @@ export default function VitalInfoScreen() {
 
   const { loading, error, success, read, write } = useMifareNFC();
 
-useEffect(() => {
-  /*   const mem = new MemoryChip("MifareUltralightEV1_128B", MedicalLayout);
-    mem.writeMap(placeholderData);
-    write(mem.dump()); */
+  useEffect(() => {
+    /*   const mem = new MemoryChip("MifareUltralightEV1_128B", MedicalLayout);
+      mem.writeMap(placeholderData);
+      write(mem.dump()); */
 
 
-   read().then((data) => {
-    if (!data) return;
-    const mem = MemoryChip.fromData("MifareUltralightEV1_128B", MedicalLayout, new Uint8Array(data));
+    read().then((data) => {
+      if (!data) return;
 
-    try {
-      mem.setLock(true);
-      const map = mem.readMap();
+      const mem = MemoryChip.fromData(
+        "MifareUltralightEV1_128B",
+        LAYOUT_V1,
+        new Uint8Array(data)
+      );
 
-      const isbtId = map.isbt128[0];
-      if (isbtId !== 0) { 
-        const v = findVitalByFileIndex(vitalInfo!, 'en', 'isbt128', isbtId);
-        if (v) setISBT128(prev => [...prev, v]);
+      try {
+        mem.setLock(true);
+        const map = mem.readMap();
+
+        if (map.isbt128 !== 0) {
+          const v = findVitalByFileIndex(vitalInfo!, 'en', 'isbt128', map.isbt128);
+          if (v) setISBT128(prev => [...prev, v]);
+        }
+
+        map.cie11.forEach((id) => {
+          if (id === 0) return;
+          const v = findVitalByFileIndex(vitalInfo!, 'en', 'cie11', id);
+          if (v) setCIE11(prev => [...prev, v]);
+        });
+
+        map.snomedct.forEach((id) => {
+          if (id === 0) return;
+          const v = findVitalByFileIndex(vitalInfo!, 'en', 'snomedct', id);
+          if (v) setSNOMEDCT(prev => [...prev, v]);
+        });
+
+
+      } catch (err) {
+        console.error("Error procesando los u8:", err);
+      } finally {
+        mem.setLock(false);
       }
-
-      map.cie11.forEach((id) => {
-        if (id === 0) return; 
-        const v = findVitalByFileIndex(vitalInfo!, 'en', 'cie11', id);
-        if (v) setCIE11(prev => [...prev, v]);
-      });
-
-      map.snomedct.forEach((id) => {
-        if (id === 0) return;
-        const v = findVitalByFileIndex(vitalInfo!, 'en', 'snomedct', id);
-        if (v) setSNOMEDCT(prev => [...prev, v]);
-      });
-
- 
-
-    } catch (err) {
-      console.error("Error procesando los u8:", err);
-    } finally {
-      mem.setLock(false);
-    }
-  }); 
-}, [vitalInfo]);
+    });
+  }, [vitalInfo]);
   const getRecordsByStandard = (standard: "ISBT128" | "CIE11" | "SNOMEDCT"): string[] => {
     const allRecords = [...CIE11, ...SNOMEDCT, ...ISBT128];
 
@@ -146,7 +140,6 @@ useEffect(() => {
             <Text style={styles.subtitle}>Información Médica Vital</Text>
           </View>
 
-          {/* ESTADO: CARGANDO */}
           {isPageLoading && (
             <View style={styles.statusCenter}>
               <ActivityIndicator size="large" color={TEAL} />
