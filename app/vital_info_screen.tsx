@@ -1,7 +1,7 @@
 import { useMedicalStore } from '@/constants/app.store';
 import { MemoryChip } from '@/core/chip';
 import { findVitalByFileIndex, LAYOUT_V1, LayoutV1Values, LayoutVersion, MedicalRecord } from '@/core/medical';
-import useMifareNFC from '@/hooks/use-mifare-nfc';
+import useNdefNFC from '@/hooks/use-ndef-nfc';
 import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
@@ -58,6 +58,8 @@ const placeholderData: LayoutV1Values = {
   other: new Uint8Array([1, 3, 5, 7, 9, 0, 0]),
 };
 
+
+
 export default function VitalInfoScreen() {
   const { vitalInfo } = useMedicalStore();
 
@@ -65,52 +67,94 @@ export default function VitalInfoScreen() {
   const [SNOMEDCT, setSNOMEDCT] = useState<MedicalRecord[]>([]);
   const [ISBT128, setISBT128] = useState<MedicalRecord[]>([]);
 
-  const { loading, error, success, read, write } = useMifareNFC();
-
+  // const { loading, error, success, read, write } = useMifareNFC();
+  const { loading, error, success, read, write } = useNdefNFC();
   useEffect(() => {
-    /*   const mem = new MemoryChip("MifareUltralightEV1_128B", MedicalLayout);
-      mem.writeMap(placeholderData);
-      write(mem.dump()); */
 
-
-    read().then((data) => {
-      if (!data) return;
-
-      const mem = MemoryChip.fromData(
+    const writeData = async () => {
+      const mem = MemoryChip.fromValues(
         "MifareUltralightEV1_128B",
         LAYOUT_V1,
-        new Uint8Array(data)
+        placeholderData
       );
 
-      try {
-        mem.setLock(true);
-        const map = mem.readMap();
+      const payload = mem.dump();
 
-        if (map.isbt128 !== 0) {
-          const v = findVitalByFileIndex(vitalInfo!, 'en', 'isbt128', map.isbt128);
-          if (v) setISBT128(prev => [...prev, v]);
+      try {
+        await write(payload);
+      } catch (e) {
+        console.log("Retrying after format...");
+        await write(payload);
+      }
+    };
+    const readData = async () => {
+      read().then((ndef_result) => {
+        console.log("[PARSE] data recibida:", ndef_result);
+        if (!ndef_result) {
+          console.log("[PARSE] data es null, abortando");
+          return;
         }
 
-        map.cie11.forEach((id) => {
-          if (id === 0) return;
-          const v = findVitalByFileIndex(vitalInfo!, 'en', 'cie11', id);
-          if (v) setCIE11(prev => [...prev, v]);
-        });
-
-        map.snomedct.forEach((id) => {
-          if (id === 0) return;
-          const v = findVitalByFileIndex(vitalInfo!, 'en', 'snomedct', id);
-          if (v) setSNOMEDCT(prev => [...prev, v]);
-        });
+        const rawBytes = ndef_result.data!;
+        console.log("[PARSE] rawBytes completo:", Array.from(rawBytes));
 
 
-      } catch (err) {
-        console.error("Error procesando los u8:", err);
-      } finally {
-        mem.setLock(false);
-      }
-    });
-  }, [vitalInfo]);
+
+        console.log("[PARSE] alignedData:", Array.from(rawBytes));
+
+        const mem = MemoryChip.fromData(
+          "MifareUltralightEV1_128B",
+          LAYOUT_V1,
+          rawBytes
+        );
+        console.log("[PARSE] MemoryChip creado:", mem);
+
+
+        try {
+          mem.setLock(true);
+          const map = mem.readMap();
+          console.log(map);
+
+
+          const newISBT: MedicalRecord[] = [];
+          const newCIE11: MedicalRecord[] = [];
+          const newSNOMED: MedicalRecord[] = [];
+
+          if (map.isbt128 !== 0) {
+            const v = findVitalByFileIndex(vitalInfo, 'en', 'isbt128', map.isbt128);
+            if (v) newISBT.push(v);
+          }
+
+          map.cie11.forEach((id) => {
+            if (id === 0) return;
+            const v = findVitalByFileIndex(vitalInfo, 'en', 'cie11', id);
+            if (v) newCIE11.push(v);
+          });
+
+          map.snomedct.forEach((id) => {
+            if (id === 0) return;
+            const v = findVitalByFileIndex(vitalInfo, 'en', 'snomedct', id);
+            if (v) newSNOMED.push(v);
+          });
+
+          setISBT128(newISBT);
+          setCIE11(newCIE11);
+          setSNOMEDCT(newSNOMED);
+
+        } catch (err) {
+          console.error("Error procesando los u8:", err);
+        } finally {
+          mem.setLock(false);
+        }
+      });
+    }
+
+
+    //writeData()
+    readData();
+
+  }, []);
+
   const getRecordsByStandard = (standard: "ISBT128" | "CIE11" | "SNOMEDCT"): string[] => {
     const allRecords = [...CIE11, ...SNOMEDCT, ...ISBT128];
 

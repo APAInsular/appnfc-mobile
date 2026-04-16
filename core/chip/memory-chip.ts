@@ -24,7 +24,7 @@ export class MemoryChip<L extends LayoutEntry<any, any>> {
 
     private constructor(chip: ChipType, layout: L) {
         this.config = ChipSpecs[chip];
-        this.buffer = new Uint8Array(this.config.totalMemory);
+        this.buffer = new Uint8Array(this.config.user.length);
         this.layout = layout;
     }
 
@@ -77,7 +77,7 @@ export class MemoryChip<L extends LayoutEntry<any, any>> {
             );
         }
 
-        if (getEndByte(slot) >= this.config.totalMemory) {
+        if (slot.start + slot.length > this.buffer.length) {
             throw new Error("Target slot out of bounds");
         }
 

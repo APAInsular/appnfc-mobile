@@ -35,31 +35,43 @@ export default function useMifareNFC() {
 
     const read = async (): Promise<Uint8Array | null> => {
         setLoading(true);
+        console.log("[NFC] Iniciando lectura...");
         try {
+            console.log("[NFC] Solicitando tecnología MifareUltralight...");
             await NfcManager.requestTechnology(NfcTech.MifareUltralight);
+            console.log("[NFC] Tecnología concedida");
 
             const bytes: number[] = [];
-            for (let i = 4; i <= 28; i += 4) {
-                try {
-                    const pages =
-                        await NfcManager.mifareUltralightHandlerAndroid.mifareUltralightReadPages(
-                            i,
-                        );
+
+            for (let page = 4; page < 44; page += 4) {
+                console.log(`[NFC] Leyendo página ${page}...`);
+                const pages =
+                    await NfcManager.mifareUltralightHandlerAndroid.mifareUltralightReadPages(
+                        page,
+                    );
+                console.log(`[NFC] Página ${page}:`, pages);
+
+                if (pages && pages.length > 0) {
                     bytes.push(...Array.from(pages));
-                } catch {
+                } else {
+                    console.log(`[NFC] Página ${page} vacía, parando`);
                     break;
                 }
             }
 
+            console.log(`[NFC] Total bytes: ${bytes.length}`, bytes);
+            setSuccess(true);
             return new Uint8Array(bytes);
         } catch (ex) {
+            console.error("[NFC] Error:", ex);
             setError(String(ex));
             return null;
         } finally {
-            NfcManager.cancelTechnologyRequest();
+            await NfcManager.cancelTechnologyRequest().catch((e) =>
+                console.warn("[NFC] Cancel error:", e),
+            );
             setLoading(false);
         }
     };
-
     return { ...state, write, read };
 }
