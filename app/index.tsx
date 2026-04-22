@@ -1,4 +1,5 @@
 import { useMedicalStore } from '@/constants/app.store';
+import { useAuth } from '@/hooks/use-auth';
 import useVitalInfo from '@/hooks/use-vital-info';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
@@ -37,10 +38,11 @@ export default function LoginScreen() {
   }, [vitalInfo, loadingVitalInfo, hasBeenRead]);
 
   // ? Login screen
-  const [usuario, setUsuario] = useState('');
-  const [contrasena, setContrasena] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [pressing, setPressing] = useState(false);
+  const { handleLogin, handleLogout, loading } = useAuth();
 
   const buttonScale = useRef(new Animated.Value(1)).current;
 
@@ -64,10 +66,15 @@ export default function LoginScreen() {
     }).start();
   };
 
-  const handleConfirmar = () => {
-    router.push('/vital_info_screen');
+  const handleConfirm = async () => {
+      try {
+          await handleLogin({ email, password });
+          router.push('/vital_info_screen');
+      } catch(err) {
+          console.log("Failed login", err);
+      }
   };
-
+  
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor={BG} />
@@ -90,18 +97,18 @@ export default function LoginScreen() {
             <View style={styles.form}>
               <View style={[
                 styles.inputWrapper,
-                focusedField === 'usuario' && styles.inputWrapperFocused,
+                focusedField === 'email' && styles.inputWrapperFocused,
               ]}>
-                <Text style={styles.inputLabel}>Usuario</Text>
+                <Text style={styles.inputLabel}>Email</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="ej: x23xz6"
                   placeholderTextColor={MUTED}
-                  value={usuario}
-                  onChangeText={setUsuario}
+                  value={email}
+                  onChangeText={setEmail}
                   autoCapitalize="none"
                   autoCorrect={false}
-                  onFocus={() => setFocusedField('usuario')}
+                  onFocus={() => setFocusedField('email')}
                   onBlur={() => setFocusedField(null)}
                 />
               </View>
@@ -109,15 +116,15 @@ export default function LoginScreen() {
 
               <View style={[
                 styles.inputWrapper,
-                focusedField === 'contrasena' && styles.inputWrapperFocused,
+                focusedField === 'password' && styles.inputWrapperFocused,
               ]}>
                 <Text style={styles.inputLabel}>Contraseña</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="••••••••"
                   placeholderTextColor={MUTED}
-                  value={contrasena}
-                  onChangeText={setContrasena}
+                  value={password}
+                  onChangeText={setPassword}
                   secureTextEntry
                   autoCapitalize="none"
                   onFocus={() => setFocusedField('contrasena')}
@@ -133,7 +140,7 @@ export default function LoginScreen() {
                 </View>
                 <Pressable
                   style={[styles.button, pressing && styles.buttonActive]}
-                  onPress={handleConfirmar}
+                  onPress={handleConfirm}
                   onPressIn={onPressIn}
                   onPressOut={onPressOut}
                 >
@@ -242,22 +249,22 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   securityNote: {
-  flexDirection: 'row',
-  alignItems: 'flex-start',
-  backgroundColor: '#EEF7F6',
-  borderRadius: 8,
-  paddingHorizontal: 12,
-  paddingVertical: 10,
-  gap: 8,
-},
-securityIcon: {
-  fontSize: 13,
-  marginTop: 1,
-},
-securityText: {
-  flex: 1,
-  fontSize: 12,
-  color: MUTED,
-  lineHeight: 18,
-},
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#EEF7F6',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  securityIcon: {
+    fontSize: 13,
+    marginTop: 1,
+  },
+  securityText: {
+    flex: 1,
+    fontSize: 12,
+    color: MUTED,
+    lineHeight: 18,
+  },
 });
