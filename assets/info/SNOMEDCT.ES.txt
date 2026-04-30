@@ -9,3 +9,8 @@ es-ES|SNOMEDCT
 116859006;Receptor de trasplante de organo
 7140000;Shock septico
 25064002;Cetoacidosis diabetica
+293638001;Alergia al ibuprofeno
+91935009;Alergia al cacahuete
+419511003;Alergia a la propofol
+294218001;Alergia a la codeína
+293614002;Alergia a las sulfonamidas

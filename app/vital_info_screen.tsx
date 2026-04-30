@@ -1,6 +1,6 @@
 import { useMedicalStore } from '@/constants/app.store';
 import { MemoryChip } from '@/core/chip';
-import { findVitalByFileIndex, LAYOUT_V1, LayoutV1Values, LayoutVersion, MedicalRecord } from '@/core/medical';
+import { findVitalByFileIndex, LAYOUT_V0_0, LayoutV0_0Values, LayoutVersion, MedicalRecord } from '@/core/medical';
 import useNdefNFC from '@/hooks/use-ndef-nfc';
 import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
@@ -48,17 +48,15 @@ const bytesToNum = (bytes: Uint8Array): number => {
 
 const tel1Bytes = bigIntTo8Bytes(34600112233n);
 const tel2Bytes = bigIntTo8Bytes(34644556677n);
-const placeholderData: LayoutV1Values = {
+const placeholderData: LayoutV0_0Values = {
   type: 1,
-  version: LayoutVersion.Medical,
+  version: LayoutVersion.V0_0,
   phones: new Uint8Array([0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 9]),
   isbt128: 5,
   cie11: new Uint8Array([1, 2, 3, 0, 0, 0, 0]),
   snomedct: new Uint8Array([4, 6, 8, 10, 0, 0, 0]),
   other: new Uint8Array([1, 3, 5, 7, 9, 0, 0]),
 };
-
-
 
 export default function VitalInfoScreen() {
   const { vitalInfo } = useMedicalStore();
@@ -74,7 +72,7 @@ export default function VitalInfoScreen() {
     const writeData = async () => {
       const mem = MemoryChip.fromValues(
         "MifareUltralightEV1_128B",
-        LAYOUT_V1,
+        LAYOUT_V0_0,
         placeholderData
       );
 
@@ -104,7 +102,7 @@ export default function VitalInfoScreen() {
 
         const mem = MemoryChip.fromData(
           "MifareUltralightEV1_128B",
-          LAYOUT_V1,
+          LAYOUT_V0_0,
           rawBytes
         );
         console.log("[PARSE] MemoryChip creado:", mem);
@@ -121,19 +119,19 @@ export default function VitalInfoScreen() {
           const newSNOMED: MedicalRecord[] = [];
 
           if (map.isbt128 !== 0) {
-            const v = findVitalByFileIndex(vitalInfo, 'en', 'isbt128', map.isbt128);
+            const v = findVitalByFileIndex(vitalInfo!, 'en', 'isbt128', map.isbt128);
             if (v) newISBT.push(v);
           }
 
           map.cie11.forEach((id) => {
             if (id === 0) return;
-            const v = findVitalByFileIndex(vitalInfo, 'en', 'cie11', id);
+            const v = findVitalByFileIndex(vitalInfo!, 'en', 'cie11', id);
             if (v) newCIE11.push(v);
           });
 
           map.snomedct.forEach((id) => {
             if (id === 0) return;
-            const v = findVitalByFileIndex(vitalInfo, 'en', 'snomedct', id);
+            const v = findVitalByFileIndex(vitalInfo!, 'en', 'snomedct', id);
             if (v) newSNOMED.push(v);
           });
 
@@ -207,6 +205,10 @@ export default function VitalInfoScreen() {
           {(success || vitalInfo) && !isPageLoading && (
             <View style={styles.card}>
               <View style={styles.form}>
+              
+
+{
+  /* 
                 <View style={styles.bloodBanner}>
                   <Feather name="droplet" size={18} color="#FF5252" />
                   <Text style={styles.bloodText}>
@@ -215,14 +217,15 @@ export default function VitalInfoScreen() {
                     </Text>
                   </Text>
                 </View>
-
                 <InfoField
                   label="Enfermedades y Condiciones (CIE11)"
                   values={getRecordsByStandard("CIE11")}
                 />
+  */
+}
 
                 <InfoField
-                  label="Alertas e Implantes (SNOMEDCT)"
+                  label="Alertas (SNOMEDCT)"
                   values={getRecordsByStandard("SNOMEDCT")}
                 />
               </View>
